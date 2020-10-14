@@ -1,0 +1,139 @@
+
+\documentclass[10pt,aspectratio=169,mathserif]{beamer}
+\usepackage{nju}			 %导入 nju 模板宏包
+\usepackage[UTF8]{ctex}      %导入 ctex 宏包，添加中文支持
+\usepackage{xeCJK}
+\usepackage{amsmath,amsfonts,amssymb,bm}   %导入数学公式所需宏包
+\usepackage{color}			 %字体颜色支持
+\usepackage{graphicx,hyperref,url}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{setspace}
+
+% \setstretch{2}
+% \let\oldframetitle\frametitle  
+% \renewcommand{\frametitle}[1]{       % Redefine \frametitle
+% ​\oldframetitle{#1} \setstretch{2}} 
+
+
+\beamertemplateballitem		%设置 Beamer 主题
+\catcode`\。=\active        %或者=13
+\newcommand{。}{．}         %将正文中的“。”号转换为“.”。
+
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{提纲}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+
+
+\title{基于规则的中文分词算法}	        %首页信息设置
+
+\author[高辰潇]{            %个人信息设置
+    高辰潇\\[0.3cm]
+    181220014@smail.nju.edu.cn\\[0.3cm]
+    人工智能学院\\}
+
+% \title{Knowledge Transfer in Reinforcement Learning\footnote{based on \emph{Transfer Learning for Reinforcement Learning Domains: A Survey} and \emph{Transfer in Reinforcement Learning: A Framework and a Survey}}}	        %首页信息设置
+
+% \author[高辰潇]{            %个人信息设置
+%     Gao Chenxiao\\[0.3cm]
+%     181220014@smail.nju.edu.cn\\[0.3cm]
+%     School of AI, Nanjing University}
+
+\date{\today}
+
+
+
+
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}
+\frametitle{提纲}
+\tableofcontents
+\end{frame}
+
+% beginnning of sections
+
+\section{1. 算法：MMSEG}
+\begin{frame}{MMSEG}
+  \begin{spacing}{1.5}
+  \begin{itemize}
+    \item MMSEG\footnote{See http://technology.chtsai.org/mmseg/ for details.}是一种基于规则的中文分词方法。相较前向、后向、双向最大匹配，其本身可以被视作一种引入了消歧规则的前向最大匹配算法。
+    \item MMSEG基于训练集词典对句子进行词组划分，在得到长度为3的词组（chunk）后，应用先前制定的规则消解歧义。也正因此，MMSEG也可用于新的消歧规则的性能测试。
+    \item 在Simple Setting下，MMSEG算法退化成前向最大匹配；本次实验中我采用的是其Complex Setting版本。
+  \end{itemize}
+  \end{spacing}
+\end{frame}
+
+\begin{frame}{MMSEG}
+  \begin{spacing}{1.5}
+  \begin{enumerate}[1)]
+    \item 在分词时，MMSEG会对当前句子进行切分，遍历并存储所有可能的深度为3的词组切分方式（chunk）。例如“比赛以平局告终”一句，若词典为“[比赛, 平局]”，则MMSEG将存储的切分方式包括：[比, 赛, 以]，[比赛, 以, 平]和[比赛, 以, 平局]。
+  \end{enumerate}
+  \end{spacing}
+\end{frame}
+
+\begin{frame}{MMSEG}
+  \begin{enumerate}[2)]
+    \item 根据以下四种规则，对之前得到的切分方式进行筛选
+    \begin{itemize}
+      \item \emph{Rule1-Maximum Matching}
+        \par 优先选择长度最长的chunk。比如在上面的例子中，将选择[比赛, 以, 平局]。
+      \item \emph{Rule2-Maximum Average of Word Lengths}
+        \par 优先选择单词平均长度最长的分法。该规则主要针对的是句子长度无法切分出三个单词的情况，比如“国际化”一句，可能的切分方式有[国际化]，[国际, 化], [国, 际, 化]，将选择[国际化]。
+      \item \emph{Rule3-Smallest Variance of Word Length}
+        \par 优先选择词的长度方差最小的分法。例如[研究, 生命, 起源]和[研究生, 命, 起源]，将选择[研究, 生命, 起源]。
+      \item \emph{Rule4-Largest Sum of Degree of Morphemic Freedom of One-character Words}
+        \par 优先选择单字自由度之和最大的chunk。单子自由度指的是某个字作为单字出现的频次占其总出现次数的比，衡量一个字本身成为一个单词的可能性。
+    \end{itemize}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{MMSEG}
+  \begin{spacing}{1.5}
+  \begin{enumerate}[3)]
+    \item 根据上述规则筛选出唯一的`chunk`三元组后，按照该`chunk`的第一个元素对句子进行切分，然后对剩下的句子重复上一过程直到切分完毕。例如`比赛以平局告终`一句，假设最终选择的chunk为`(2, 1, 2)`(即`[比赛, 以, 平局]`)，则分词结果就是`比赛`，然后对剩余的句子`以平局告终`重复上述过程。
+    
+  \end{enumerate}
+  \end{spacing}
+\end{frame}
+
+\section{2. 其他处理}
+
+\begin{frame}{其他处理}
+  \begin{itemize}
+    \item 特殊字串识别
+    \begin{itemize}
+      \item 标点符号：——，...，---，~~~
+      \item email地址、网站地址
+      \item 百分数字
+      \item 专有名词：IOS12.0
+      \item 特殊单位：2020年、5月、31日、9时
+    \end{itemize}
+    \item 数据集预处理
+    \begin{itemize}
+      \item 切分风格不一致：[一个] vs [一，个]、[这是] vs [这，是]
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\section{3. 实验结果}
+\begin{frame}{实验结果}
+  \begin{itemize}
+    \item 榜单结果：0.9136020744931637
+    \item 无额外数据集结果：0.8858429970997282
+  \end{itemize}
+\end{frame}
+
+% end of sections
+\end{document}
